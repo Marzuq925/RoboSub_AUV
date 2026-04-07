@@ -1,12 +1,5 @@
 Test code to confirm ROS2 nodes working within docker container  
 
-Disclaimer: should work on windows but ran into permission issues so I cant verify that yet.    
-
-Use of devcontainers to write code is recommended but not nescessary  
-
-If Ros is installed locally vscode should be able to see the imports, if not then youre kinda working blind in the ide    
-
-
 prerequisites:
 Docker
 
