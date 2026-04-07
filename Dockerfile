@@ -1,6 +1,6 @@
 FROM osrf/ros:jazzy-desktop-full
 
-ARG USERNAME=Marz
+ARG USERNAME=RoboSub #Can change to any name you want
 ARG USER_UID=1001
 ARG USER_GID=$USER_UID
 
@@ -43,4 +43,4 @@ RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc \
     && echo "source /workspaces/RoboSub_AUV/install/setup.bash" >> ~/.bashrc
 
 # Make Python scripts executable
-RUN find /workspaces/RoboSub_AUV/ros2_ws/src -name "*.py" -exec chmod +x {} \;
+RUN find /workspaces/RoboSub_AUV/ros2_ws/src -name "*.py" -exec sudo chmod +x {} \;
