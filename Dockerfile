@@ -14,12 +14,17 @@ RUN rosdep init || true
 RUN rosdep update
 
 # Set working directory
-WORKDIR /AUV
+WORKDIR /workspaces/RoboSub_AUV
 
 # Copy the ROS2 workspace
 COPY ros2_ws ./ros2_ws
 
 # Build the workspace
-RUN /bin/bash -c "source /opt/ros/jazzy/setup.sh && colcon build --symlink-install"
-RUN echo "source install/setup.bash" >> ~/.bashrc
-RUN echo "chmod +x ros2_ws/src/test_package/src/test_node.py" >> ~/.bashrc
+RUN /bin/bash -c "source /opt/ros/jazzy/setup.bash && cd /workspaces/RoboSub_AUV && colcon build --symlink-install"
+
+# Source ROS2 and the workspace in bashrc
+RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc \
+    && echo "source /workspaces/RoboSub_AUV/install/setup.bash" >> ~/.bashrc
+
+# Make Python scripts executable
+RUN find /workspaces/RoboSub_AUV/ros2_ws/src -name "*.py" -exec chmod +x {} \;
