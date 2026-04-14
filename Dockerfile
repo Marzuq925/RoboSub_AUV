@@ -17,6 +17,8 @@ RUN groupadd --gid $USER_GID $USERNAME \
     python3-rosdep \
     git \
     build-essential \
+    ros-jazzy-pcl-conversions \
+    ros-jazzy-pcl-ros \
     && rm -rf /var/lib/apt/lists/* \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
@@ -26,7 +28,7 @@ USER $USERNAME
 
 
 # Initialize rosdep
-RUN rosdep init || true
+RUN sudo rosdep init || true
 RUN rosdep update
 
 # Set working directory
