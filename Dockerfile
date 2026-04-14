@@ -1,4 +1,4 @@
-FROM osrf/ros:jazzy-desktop-full
+FROM ros:jazzy-ros-core
 
 ARG USERNAME=RoboSub #Can change to any name you want
 ARG USER_UID=1001
