@@ -2,6 +2,8 @@
 
 import rclpy
 from rclpy.node import Node
+import serial
+import time
 
 
 class UART_node(Node):
@@ -14,7 +16,7 @@ class UART_node(Node):
 
        #Initialize an unique ID for this pico boot cycle
        self.id_file = "UART_pico_id.txt"
-       self.pico_id = self.read_number()
+       self.pico_id = 0
 
 
        #Open the serial port
@@ -57,13 +59,13 @@ class UART_node(Node):
        self.process_msg()
 
 
-       if (time.time() - time_last_sent_command >= self.timer_period):
+       if (time.time() - self.time_last_sent_command >= self.timer_period):
            self.send_command()
-           time_last_sent_command = time.time()   
+           self.time_last_sent_command = time.time()   
 
 
-       if (time.time() - time_last_recv_command > self.timer_period*3):
-           time_last_recv_command = time.time()
+       if (time.time() - self.time_last_recv_command > self.timer_period*3):
+           self.time_last_recv_command = time.time()
            print("SELF>DID_NOT_RECV_PACKET")
 
 
@@ -87,8 +89,8 @@ class UART_node(Node):
    #Transmitting
    def send_command(self):
        for i in range(8):
-           serial_port.write(self.commanded_vel.to_bytes(1, byteorder='big'))
-       serial_port.write(self.end_of_packet.to_bytes(1, byteorder='big'))
+           self.serial_port.write(self.commanded_vel.to_bytes(1, byteorder='big'))
+       self.serial_port.write(self.end_of_packet.to_bytes(1, byteorder='big'))
 
        self.commanded_vel += 1
        if (self.commanded_vel > 255):
@@ -97,17 +99,18 @@ class UART_node(Node):
 
    def send_paring_ack(self):
        if (time.time() - self.time_last_pair_attempted > self.pairing_cooldown_s):
-           self.pico_id = increment_number()
-           serial_port.write(b'ACK:ID')
-           serial_port.write(end_of_packet.to_bytes(1, byteorder='big'))
+        #    self.pico_id = increment_number()
+           self.pico_id = 0
+           self.serial_port.write(b'ACK:ID')
+           self.serial_port.write(self.end_of_packet.to_bytes(1, byteorder='big'))
            print("Pico Reboot Detected, assigning new ID")
            self.time_last_pair_attempted = time.time()
 
 
    #Receiving
    def process_msg(self):
-       while (serial_port.in_waiting > 0):
-           data = serial_port.read()
+       while (self.serial_port.in_waiting > 0):
+           data = self.serial_port.read()
            if(data == b'\x00'):
                if (len(self.msg_buffer) > 0): print(str(self.pico_id) + '>' + self.msg_buffer)
                self.msg_buffer = ""
