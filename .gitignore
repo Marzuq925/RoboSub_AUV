@@ -3,4 +3,4 @@
 /install
 /build
 /.devcontainer
-/ros2_ws/lib/
+/ros2_ws/src/lib/*
