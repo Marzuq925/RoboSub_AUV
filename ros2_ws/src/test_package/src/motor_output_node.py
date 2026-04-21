@@ -15,8 +15,8 @@ class UART_node(Node):
 
 
        #Initialize an unique ID for this pico boot cycle
-       self.id_file = "UART_pico_id.txt"
-       self.pico_id = 0
+       self.id_file = "/home/jetson/RoboSub_AUV_Logs/pico_uart_id.txt"
+       self.pico_id = self.read_number()
 
 
        #Open the serial port
@@ -54,7 +54,6 @@ class UART_node(Node):
 
 
 
-
    def timer_callback(self):
        """Method that is periodically called by the timer."""
        self.process_msg()
@@ -81,8 +80,8 @@ class UART_node(Node):
 
 
    def increment_number(self) -> int:
-       number = read_number() + 1
-       write_number(number)
+       number = self.read_number() + 1
+       self.write_number(number)
        return number
 
 
@@ -99,8 +98,7 @@ class UART_node(Node):
 
    def send_paring_ack(self):
        if (time.time() - self.time_last_pair_attempted > self.pairing_cooldown_s):
-        #    self.pico_id = increment_number()
-           self.pico_id = 0
+           self.pico_id = self.increment_number()
            self.serial_port.write(b'ACK:ID')
            self.serial_port.write(self.end_of_packet.to_bytes(1, byteorder='big'))
            print("Pico Reboot Detected, assigning new ID")

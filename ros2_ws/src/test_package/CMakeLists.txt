@@ -25,7 +25,7 @@ install(DIRECTORY
 install(PROGRAMS
   # TODO: add more nodes here
   src/test_node.py
-  src/UART_node.py
+  src/motor_output_node.py
   DESTINATION lib/test_package
 )
 
