@@ -48,7 +48,8 @@ class UART_node(Node):
 
 
        #Periodic Timer
-       self.timer_period: float = 0.02
+       self.timer_period: float = 0.005
+       self.command_period: float = 0.02
        self.timer = self.create_timer(self.timer_period, self.timer_callback)
 
 
@@ -58,13 +59,12 @@ class UART_node(Node):
        """Method that is periodically called by the timer."""
        self.process_msg()
 
-
-       if (time.time() - self.time_last_sent_command >= self.timer_period):
+       if (time.time() - self.time_last_sent_command >= self.command_period):
            self.send_command()
            self.time_last_sent_command = time.time()   
 
 
-       if (time.time() - self.time_last_recv_command > self.timer_period*3):
+       if (time.time() - self.time_last_recv_command > self.command_period*3):
            self.time_last_recv_command = time.time()
            print("SELF>DID_NOT_RECV_PACKET")
 
