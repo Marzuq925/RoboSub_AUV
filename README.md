@@ -13,7 +13,7 @@ CD into repo
 sudo docker build . -t auv:latest
 (optionally right click on file and click build image in vscode (need docker extension for this. This command constructs the container))  
 
-sudo docker run -it --device=/dev/ttyTHS1:/dev/ttyTHS1 -v /home/jetson/RoboSub_AUV_Logs/pico_uart_id.txt:/home/jetson/RoboSub_AUV_Logs/pico_uart_id.txt auv:latest
+sudo docker run -it --device=/dev/ttyTHS1:/dev/ttyTHS1 auv:latest
 (this actually runs it and enters the container in the terminal, and passes the UART port into the docker environment so it can be accessed)  
 
 you should see something like RoboSub@(hex string):/workspace/RoboSub#  

@@ -2,151 +2,173 @@
 
 import rclpy
 from rclpy.node import Node
+from test_package.msg import MotorCommands
 import serial
 import time
+from datetime import datetime
 
 
 class UART_node(Node):
-   """A ROS2 Node that manages UART comms between Jetson and Pico."""
+    """A ROS2 Node that manages UART comms between Jetson and Pico."""
+
+    def __init__(self):
+        super().__init__('UART_node')
+
+        #Subscibe to motor commands topic
+        self.motor_commands_subscriber = self.create_subscription(
+            msg_type=MotorCommands,
+            topic='/motor_commands',
+            callback=self.motor_commands_subscriber_callback,
+            qos_profile=1)
+
+        #Initialize an unique ID for this pico boot cycle
+        self.pico_id = self.get_timestamp()
+
+        #Open the serial port
+        self.serial_port = serial.Serial(
+            port="/dev/ttyTHS1",
+            baudrate=38400,
+            bytesize=serial.EIGHTBITS,
+            parity=serial.PARITY_ODD,
+            stopbits=serial.STOPBITS_ONE,
+        )
+        self.serial_port.reset_input_buffer()
+
+        #Define Variables
+        self.time_last_pair_attempted = time.time()
+        self.pairing_cooldown_s = 1
+
+        self.msg_buffer = ""
+        self.end_of_packet = b'\x00'
+        self.prev_ack_index = 0
+        self.prev_did_recv_packet = False
+
+        self.full_stop_speed = 128
+        self.commanded_speeds = [self.full_stop_speed] * 8
+
+        #Periodic Timer
+        self.command_period: float = 0.02
+        self.timer = self.create_timer(self.command_period, self.timer_callback)
 
 
-   def __init__(self):
-       super().__init__('UART_node')
+    #Callbacks
+    def timer_callback(self):
+        """Method that is periodically called by the timer."""
+
+        did_recv_packet = self.process_msg()
+
+        if(not did_recv_packet and not self.prev_did_recv_packet):
+            print("SELF>DID_NOT_RECV_PACKET")
+        self.prev_did_recv_packet = did_recv_packet
+
+        self.send_command()
+
+    def motor_commands_subscriber_callback(self, msg: MotorCommands):
+            """Method that is called when a new msg is received by the node."""
+            new_commanded_speeds = [
+                msg.thruster0,
+                msg.thruster1,
+                msg.thruster2,
+                msg.thruster3,
+                msg.thruster4,
+                msg.thruster5,
+                msg.thruster6,
+                msg.thruster7,
+            ]
+            
+            valid_speeds = True
+            for speed in new_commanded_speeds:
+                valid_speeds = valid_speeds and speed >= 1 and speed <= 255
+            
+            if (valid_speeds):
+                self.commanded_speeds = new_commanded_speeds
+                print("SELF>New Speeds Recv'd")
+            else:
+                self.commanded_speeds = [self.full_stop_speed] * 8
+                print("SELF>Improperly formatted commanded speeds")
 
 
-       #Initialize an unique ID for this pico boot cycle
-       self.id_file = "/home/jetson/RoboSub_AUV_Logs/pico_uart_id.txt"
-       self.pico_id = self.read_number()
+    #ID/File Ops
+    def get_timestamp(self) -> str:
+        return datetime.now().strftime("%m/%d/%Y %H:%M:%S")
 
 
-       #Open the serial port
-       self.serial_port = serial.Serial(
-           port="/dev/ttyTHS1",
-           baudrate=38400,
-           bytesize=serial.EIGHTBITS,
-           parity=serial.PARITY_ODD,
-           stopbits=serial.STOPBITS_ONE,
-       )
-       self.serial_port.reset_input_buffer()
+    #Transmitting
+    def send_command(self):
+        for i in range(8):
+            self.serial_port.write(
+                self.commanded_speeds[i].to_bytes(1, byteorder='big')
+            )
+            
+        self.serial_port.write(self.end_of_packet)
+
+    def send_paring_ack(self):
+        if (time.time() - self.time_last_pair_attempted > self.pairing_cooldown_s):
+            self.pico_id = self.get_timestamp()
+
+            self.serial_port.write(b'ACK:ID')
+            self.serial_port.write(self.end_of_packet)
+
+            print("Pico Reboot Detected, assigning new ID")
+
+            self.time_last_pair_attempted = time.time()
 
 
-       #Define Variables
-       self.time_last_sent_command = time.time()
-       self.time_last_recv_command = time.time()
+    #Receiving
+    def process_msg(self):
+        have_received_valid_packet = False
 
+        while (self.serial_port.in_waiting > 0):
+            new_byte = self.serial_port.read()
+            if(new_byte == self.end_of_packet):
+                have_received_valid_packet = self.handle_end_of_msg() or have_received_valid_packet
+                continue
+            
+            if "ACK:" in self.msg_buffer:
+                self.handle_end_of_ack_msg(new_byte)
+            else:
+                self.msg_buffer += new_byte.decode("utf-8", errors="replace")
+                if "REQ:ID" in self.msg_buffer:
+                    self.send_paring_ack()
 
-       self.time_last_pair_attempted = time.time()
-       self.pairing_cooldown_s = 1
+        return have_received_valid_packet
 
+    def handle_end_of_msg(self):
+        valid_packet = False
 
-       self.msg_buffer = ""
-       self.end_of_packet = 0
-       self.prev_ack_index = 0
+        if (len(self.msg_buffer) > 0): 
+            print(self.pico_id + '>' + self.msg_buffer)
+            valid_packet = True
 
+        self.msg_buffer = ""
+        return valid_packet
 
-       self.commanded_vel = 1 #TODO: Make this be based on a topic
+    def handle_end_of_ack_msg(self, new_byte):
+        index = int.from_bytes(new_byte, "big")
+        if (index != self.prev_ack_index+1 and self.prev_ack_index != 255):
+            print("SELF>NONSEQUENTIAL_ACK")
 
-
-       #Periodic Timer
-       self.timer_period: float = 0.005
-       self.command_period: float = 0.02
-       self.timer = self.create_timer(self.timer_period, self.timer_callback)
-
-
-
-   def timer_callback(self):
-       """Method that is periodically called by the timer."""
-       self.process_msg()
-
-       if (time.time() - self.time_last_sent_command >= self.command_period):
-           self.send_command()
-           self.time_last_sent_command = time.time()   
-
-
-       if (time.time() - self.time_last_recv_command > self.command_period*3):
-           self.time_last_recv_command = time.time()
-           print("SELF>DID_NOT_RECV_PACKET")
-
-
-   #ID/File Ops
-   def write_number(self, number: int) -> None:
-       with open(self.id_file, 'w') as f:
-           f.write(str(number))
-
-
-   def read_number(self) -> int:
-       with open(self.id_file, 'r') as f:
-           return int(f.read().strip())
-
-
-   def increment_number(self) -> int:
-       number = self.read_number() + 1
-       self.write_number(number)
-       return number
-
-
-   #Transmitting
-   def send_command(self):
-       for i in range(8):
-           self.serial_port.write(self.commanded_vel.to_bytes(1, byteorder='big'))
-       self.serial_port.write(self.end_of_packet.to_bytes(1, byteorder='big'))
-
-       self.commanded_vel += 1
-       if (self.commanded_vel > 255):
-           self.commanded_vel = 1
-
-
-   def send_paring_ack(self):
-       if (time.time() - self.time_last_pair_attempted > self.pairing_cooldown_s):
-           self.pico_id = self.increment_number()
-           self.serial_port.write(b'ACK:ID')
-           self.serial_port.write(self.end_of_packet.to_bytes(1, byteorder='big'))
-           print("Pico Reboot Detected, assigning new ID")
-           self.time_last_pair_attempted = time.time()
-
-
-   #Receiving
-   def process_msg(self):
-       while (self.serial_port.in_waiting > 0):
-           data = self.serial_port.read()
-           if(data == b'\x00'):
-               if (len(self.msg_buffer) > 0): print(str(self.pico_id) + '>' + self.msg_buffer)
-               self.msg_buffer = ""
-               self.time_last_recv_command = time.time()
-           else:
-               if "ACK:" in self.msg_buffer:
-                   index = int.from_bytes(data, "big")
-                   if (index != self.prev_ack_index+1 and self.prev_ack_index != 255): print("SELF>NONSEQUENTIAL_ACK")
-                   self.prev_ack_index = index
-                   self.msg_buffer += str(index)
-               else:
-                   self.msg_buffer += data.decode("utf-8", errors="replace")
-
-
-               if "REQ:ID" in self.msg_buffer:
-                   self.send_paring_ack()
+        self.prev_ack_index = index
+        self.msg_buffer += str(index)
 
 
 def main(args=None):
-   """
-   The main function.
-   :param args: Not used directly by the user, but used by ROS2 to configure
-   certain aspects of the Node.
-   """
-   try:
-       rclpy.init(args=args)
+    """
+    The main function.
+    :param args: Not used directly by the user, but used by ROS2 to configure
+    certain aspects of the Node.
+    """
+    try:
+        rclpy.init(args=args)
 
-
-       uart_manager_node = UART_node()
-
-
-       rclpy.spin(uart_manager_node)
-   except KeyboardInterrupt:
-       pass
-   except Exception as e:
-       print(e)
+        uart_manager_node = UART_node()
+        rclpy.spin(uart_manager_node)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(e)
 
 
 if __name__ == '__main__':
-   main()
+    main()
 
