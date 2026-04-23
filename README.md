@@ -20,4 +20,4 @@ you should see something like RoboSub@(hex string):/workspace/RoboSub#
 you can now run the ros node
 
 ros2 run test_package test_node.py  
-ros2 run test_package motor_output_node.py
+ros2 run test_package motor_uart_node.py

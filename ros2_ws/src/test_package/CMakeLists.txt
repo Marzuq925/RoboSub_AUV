@@ -45,7 +45,7 @@ install(DIRECTORY
 install(PROGRAMS
   # TODO: add more nodes here
   src/test_node.py
-  src/motor_output_node.py
+  src/motor_uart_node.py
   DESTINATION lib/test_package
 )
 
