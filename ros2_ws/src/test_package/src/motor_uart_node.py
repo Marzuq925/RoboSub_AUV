@@ -161,8 +161,8 @@ def main(args=None):
     try:
         rclpy.init(args=args)
 
-        uart_manager_node = UART_node()
-        rclpy.spin(uart_manager_node)
+        uart_node = UART_node()
+        rclpy.spin(uart_node)
     except KeyboardInterrupt:
         pass
     except Exception as e:

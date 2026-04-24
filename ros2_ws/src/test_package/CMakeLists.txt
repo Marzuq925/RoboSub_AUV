@@ -46,6 +46,7 @@ install(PROGRAMS
   # TODO: add more nodes here
   src/test_node.py
   src/motor_uart_node.py
+  src/gpio_node.py
   DESTINATION lib/test_package
 )
 
