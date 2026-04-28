@@ -35,7 +35,7 @@ class UART_node(Node):
         self.serial_port.reset_input_buffer()
 
         #Define Variables
-        self.time_last_pair_attempted = time.time()
+        self.time_last_pair_attempted = rclpy.time.time()
         self.pairing_cooldown_s = 1
 
         self.msg_buffer = ""
@@ -103,7 +103,7 @@ class UART_node(Node):
         self.serial_port.write(self.end_of_packet)
 
     def send_paring_ack(self):
-        if (time.time() - self.time_last_pair_attempted > self.pairing_cooldown_s):
+        if (rclpy.time.time() - self.time_last_pair_attempted > self.pairing_cooldown_s):
             self.pico_id = self.get_timestamp()
 
             self.serial_port.write(b'ACK:ID')
@@ -111,7 +111,7 @@ class UART_node(Node):
 
             print("Pico Reboot Detected, assigning new ID")
 
-            self.time_last_pair_attempted = time.time()
+            self.time_last_pair_attempted = rclpy.time.time()
 
 
     #Receiving

@@ -28,7 +28,7 @@ RUN usermod -aG dialout $USERNAME \
     && usermod -aG gpio $USERNAME
 
 # Install python libs
-RUN apt-get update && apt-get install -y python3-serial && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y python3-serial && sudo apt install -y ros-$ROS_DISTRO-foxglove-bridge && rm -rf /var/lib/apt/lists/*
 
 # Install Jetson.GPIO
 RUN pip3 install Jetson.GPIO --break-system-packages

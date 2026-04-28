@@ -15,7 +15,7 @@ class GPIO_node(Node):
         print("Hello from GPIO")
 
         GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(12, GPIO.OUT)
+        GPIO.setup(18, GPIO.OUT)
 
         while True:
             print("High!")
