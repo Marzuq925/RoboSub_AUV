@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y python3-serial && sudo apt install -y r
 
 # Install Jetson.GPIO
 RUN pip3 install Jetson.GPIO --break-system-packages
+RUN pip3 install simple-pid --break-system-packages
 
 # Set up GPIO udev rules (needed for non-root GPIO access)
 RUN echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", ACTION=="add", PROGRAM="/bin/sh -c '\''chown root:gpio /sys/class/gpio/export /sys/class/gpio/unexport ; chmod 220 /sys/class/gpio/export /sys/class/gpio/unexport'\''"' > /etc/udev/rules.d/99-gpio.rules \
