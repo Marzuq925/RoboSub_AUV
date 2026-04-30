@@ -3,7 +3,9 @@
 import rclpy
 from rclpy.node import Node
 import Jetson.GPIO as GPIO
+from GPIO.msg import input_state, output_state #i think imports got some issues
 import time
+from rclpy.callback_groups import ReentrantCallbackGroup
 
 
 class GPIO_node(Node):
@@ -12,12 +14,30 @@ class GPIO_node(Node):
     def __init__(self):
         super().__init__('GPIO_node')
 
-        print("Hello from GPIO")
+        # callback group to allow for multithreading
+        self.cb_group = ReentrantCallbackGroup()
+
+        # publisher
+        self.ouput_publisher = self.create_publisher(
+            output_state,
+            "gpio/output",
+            1
+        )
+
+        # subscription
+        self.input_subscription = self.create_subscription(
+            input_state,
+            "/gpio/input",
+            self.handle_input,
+            10,
+            callback_group=self.cb_group,
+        )
 
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(18, GPIO.OUT)
 
-        while True:
+        # for pwm testing
+        while False:
             print("High!")
             GPIO.output(7, GPIO.HIGH)
             time.sleep(1)
@@ -25,6 +45,11 @@ class GPIO_node(Node):
             GPIO.output(7, GPIO.LOW)
             time.sleep(1)
 
+        self.get_logger().info("gpio node intialized")
+
+    def handle_input(self, input):
+        """ Handle GPIO inputs """
+        pass
 
 def main(args=None):
     """
